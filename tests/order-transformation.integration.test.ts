@@ -19,6 +19,7 @@ import {
     transformOrders,
     ValidationError,
 } from "../src";
+import * as validateCustomerOrderModule from "../src/validation/validate-customer-order";
 
 type SampleEntry = {
     name: string;
@@ -434,5 +435,22 @@ describe("transformOrders (batch)", () => {
         const firstFail = failed[0]!;
         expect(firstFail.error).toBeInstanceOf(Error);
         expect(firstFail.error.message).toContain("at least one item");
+    });
+
+    it("wraps non-Error thrown values as ValidationError", () => {
+        const spy = jest
+            .spyOn(validateCustomerOrderModule, "validateCustomerOrder")
+            .mockImplementation(() => {
+                throw "non-error-throwable";
+            });
+        try {
+            const { successful, failed } = transformOrders([firstValid.order]);
+            expect(successful).toHaveLength(0);
+            expect(failed).toHaveLength(1);
+            expect(failed[0]!.error).toBeInstanceOf(ValidationError);
+            expect(failed[0]!.error.message).toBe("non-error-throwable");
+        } finally {
+            spy.mockRestore();
+        }
     });
 });
